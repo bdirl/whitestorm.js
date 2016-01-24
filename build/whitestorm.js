@@ -331,211 +331,6 @@ THREE.BufferGeometryUtils = {
 
 };
 
-/**
- * @author mrdoob / http://mrdoob.com/
- * @author schteppe / https://github.com/schteppe
- * @author alex2401 / https://github.com/sasha240100
- */
-var PI_2 = Math.PI / 2;
-var PointerLockControls = function PointerLockControls(camera, mesh, params) {
-
-    /* Velocity properties */
-    var velocityFactor = 1,
-        //Same as 20 * 0.05
-        runVelocity = 0.25;
-    mesh.setAngularFactor({
-        x: 0,
-        y: 0,
-        z: 0
-    });
-
-    /* Init */
-    var scope = this,
-        pitchObject = new THREE.Object3D();
-    pitchObject.add(camera);
-
-    var yawObject = new THREE.Object3D();
-    yawObject.position.y = params.ypos; // eyes are 2 meters above the ground
-    yawObject.add(pitchObject);
-
-    var quat = new THREE.Quaternion(),
-        moveForward = false,
-        moveBackward = false,
-        moveLeft = false,
-        moveRight = false,
-        canJump = false;
-
-    var contactNormal = new THREE.Vector3(); // Normal in the contact, pointing *out* of whatever the player touched
-
-    mesh.addEventListener("collision", function(other_object, v, r, contactNormal) {
-
-        // If contactNormal.dot(upAxis) is between 0 and 1, we know that the contact normal is somewhat in the up direction.
-        //Update, we do not need upAxis, (a, b, c).dot((0, 1, 0)) = b right ?
-        if (contactNormal.y < 0.5) // Use a "good" threshold value between 0 and 1 here!
-            canJump = true;
-    });
-
-    function onMouseMove(event) {
-        if (scope.enabled === false) return;
-
-        var movementX = event.movementX || event.mozMovementX || event.getMovementX() || 0,
-            movementY = event.movementY || event.mozMovementY || event.getMovementY() || 0;
-
-        yawObject.rotation.y -= movementX * 0.002, pitchObject.rotation.x -= movementY * 0.002;
-
-        pitchObject.rotation.x = Math.max(-PI_2, Math.min(PI_2, pitchObject.rotation.x));
-    };
-
-    function onKeyDown(event) {
-
-        switch (event.keyCode) {
-
-            case 38: // up
-            case 87:
-                // w
-                moveForward = true;
-                break;
-
-            case 37: // left
-            case 65:
-                // a
-                moveLeft = true;
-                break;
-
-            case 40: // down
-            case 83:
-                // s
-                moveBackward = true;
-                break;
-
-            case 39: // right
-            case 68:
-                // d
-                moveRight = true;
-                break;
-
-            case 32:
-                // space
-                if (canJump == true) {
-                    mesh.applyCentralImpulse({
-                        x: 0,
-                        y: 300,
-                        z: 0
-                    }); //Read the PhysiJS Code, they do not verify if
-                    //the argument is a THREE.Vector3 as long is it has x, y, z
-                }
-                canJump = false;
-                break;
-
-            case 15:
-                // shift
-                runVelocity = 0.5;
-                break;
-        }
-    };
-
-    function onKeyUp(event) {
-        switch (event.keyCode) {
-
-            case 38: // up
-            case 87:
-                // w
-                moveForward = false;
-                break;
-
-            case 37: // left
-            case 65:
-                // a
-                moveLeft = false;
-                break;
-
-            case 40: // down
-            case 83:
-                // a
-                moveBackward = false;
-                break;
-
-            case 39: // right
-            case 68:
-                // d
-                moveRight = false;
-                break;
-
-            case 15:
-                // shift
-                runVelocity = 0.25;
-                break;
-        }
-    };
-
-    document.body.addEventListener('mousemove', onMouseMove, false);
-    document.body.addEventListener('keydown', onKeyDown, false);
-    document.body.addEventListener('keyup', onKeyUp, false);
-
-    this.enabled = false;
-
-    this.getObject = function() {
-        return yawObject;
-    };
-
-    this.getDirection = function(targetVec) {
-        targetVec.set(0, 0, -1);
-        quat.multiplyVector3(targetVec);
-    };
-
-    // Moves the camera to the Cannon.js object position and adds velocity to the object if the run key is down
-    var inputVelocity = new THREE.Vector3(),
-        euler = new THREE.Euler();
-
-    this.update = function(delta) {
-
-        var moveVec = new THREE.Vector3();
-
-        if (scope.enabled === false) return;
-
-        delta = 0.5;
-        delta = Math.min(delta, 0.5);
-
-        inputVelocity.set(0, 0, 0);
-
-        if (moveForward) {
-            inputVelocity.z = -velocityFactor * delta * params.speed * runVelocity;
-        }
-
-        if (moveBackward) {
-            inputVelocity.z = velocityFactor * delta * params.speed * runVelocity;
-        }
-
-        if (moveLeft) {
-            inputVelocity.x = -velocityFactor * delta * params.speed * runVelocity;
-        }
-
-        if (moveRight) {
-            inputVelocity.x = velocityFactor * delta * params.speed * runVelocity;
-        }
-
-        // Convert velocity to world coordinates
-        euler.x = pitchObject.rotation.x, euler.y = yawObject.rotation.y, euler.order = "XYZ";
-        quat.setFromEuler(euler);
-
-        inputVelocity.applyQuaternion(quat);
-        //quat.multiplyVector3(inputVelocity);
-
-        mesh.applyCentralImpulse({
-            x: inputVelocity.x * 10,
-            y: 0,
-            z: inputVelocity.z * 10
-        });
-        mesh.setAngularVelocity({
-            x: inputVelocity.z * 10,
-            y: 0,
-            z: -inputVelocity.x * 10
-        });
-
-        yawObject.position.copy(mesh.position);
-    };
-};
-
 (function($) {
     if ("undefined" !== typeof $.event) {
         (function() {
@@ -1889,11 +1684,13 @@ THREE.ShaderTerrain = {
 };
 
 WHS.API.construct = function(root, params, type) {
+
     'use strict';
 
     if (!root) console.error("@constructor: WHS root object is not defined.");
 
     var _set = function _set(x, y, z) {
+
         this.x = x;
         this.y = y;
         this.z = z;
@@ -1939,6 +1736,7 @@ WHS.API.construct = function(root, params, type) {
     var key = 0;
 
     root.modellingQueue.forEach(function(el) {
+
         if (el.type == type) key++;
     });
 
@@ -1967,29 +1765,28 @@ WHS.API.construct = function(root, params, type) {
     return this;
 };
 
-WHS.API.construct.prototype.build = function(figure, object) {
+WHS.API.construct.prototype.build = function(mesh) {
+
     'use strict';
 
-    figure = figure || this.visible;
-    object = object || this.body;
-    var isPhysics = !!(arguments.length == 2 && object);
+    mesh = mesh || this.mesh;
 
     try {
+
         // Shadowmap.
-        figure.castShadow = true;
-        figure.receiveShadow = true;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
 
         // Position.
-        figure.position.set(this._pos.x, this._pos.y, this._pos.z);
-        if (isPhysics && !this.dtb) object.position.set(this._pos.x, this._pos.y, this._pos.z);
+        mesh.position.set(this._pos.x, this._pos.y, this._pos.z);
 
         // Rotation.
-        figure.rotation.set(this._rot.x, this._rot.y, this._rot.z);
+        mesh.rotation.set(this._rot.x, this._rot.y, this._rot.z);
         // TODO: CANNON.JS object rotation.
         //if (isPhysics) object.rotation.set(this._rot.x, this._rot.y, this._rot.z);
 
         // Scaling.
-        figure.scale.set(this._scale.x, this._scale.y, this._scale.z);
+        mesh.scale.set(this._scale.x, this._scale.y, this._scale.z);
         // TODO: CANNON.JS object scaling.
         //object.scale.set(this._rot.x, this._rot.y, this._rot.z);
     } catch (err) {
@@ -2011,13 +1808,16 @@ WHS.API.construct.prototype.build = function(figure, object) {
  * @param {Var} variablePoint Variable with value for apply. (OPTIONAL)
  */
 WHS.API.def = function(option, value, variablePoint) {
+
     'use strict';
 
     if (arguments.length < 2) console.error("Something wrong! option? value?");
     else if (arguments.length == 2) {
+
         option = option || value;
         return option;
     } else if (arguments.length == 3 && variablePoint) {
+
         variablePoint = option || value;
         return variablePoint;
     }
@@ -2029,6 +1829,7 @@ WHS.API.extend = function(object) {
     }
 
     // $.extend alternative, ... is the spread operator.
+
     var _iteratorNormalCompletion = true;
     var _didIteratorError = false;
     var _iteratorError = undefined;
@@ -2047,7 +1848,10 @@ WHS.API.extend = function(object) {
                 for (var _iterator2 = Object.getOwnPropertyNames(extension)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
                     var prop = _step2.value;
                     // Do not traverse the prototype chain.
-                    object[prop] = object[prop] === 0 ? 0 : object[prop] || extension[prop]; // Add values that do not already exist.
+                    if (object[prop] != undefined && object[prop].toString() == '[object Object]' && extension[prop].toString() == '[object Object]')
+                    //Goes deep only if object[prop] and extension[prop] are both objects !
+                        WHS.API.extend(object[prop], extension[prop]);
+                    else object[prop] = object[prop] === 0 ? 0 : object[prop] || extension[prop]; // Add values that do not already exist.
                 }
             } catch (err) {
                 _didIteratorError2 = true;
@@ -2092,6 +1896,7 @@ WHS.API.extend = function(object) {
  * @returns {Object} Intersect array.
  */
 WHS.API.getheight = function(pos, diff, terrain, direction) {
+
     'use strict';
 
     diff = diff || 1000;
@@ -2100,7 +1905,7 @@ WHS.API.getheight = function(pos, diff, terrain, direction) {
 
     this.raycaster = new THREE.Raycaster(new THREE.Vector3(pos.x, diff, direction * pos.y), new THREE.Vector3(0, -1, 0));
 
-    this.intersect = this.raycaster.intersectObject(terrain.visible);
+    this.intersect = this.raycaster.intersectObject(terrain.mesh);
 
     return this.intersect;
 };
@@ -2113,19 +1918,23 @@ WHS.API.getheight = function(pos, diff, terrain, direction) {
  * @return {Boolean} thrObj *THREE.JS* geometry.
  */
 WHS.API.isSame = function(a1, a2) {
+
     return !(a1.sort() > a2.sort() || a1.sort() < a2.sort());
 };
 
 // #DONE:10 JSONLoader don't work.
 WHS.API.JSONLoader = function() {
+
     return new THREE.JSONLoader();
 };
 
 WHS.API.TextureLoader = function() {
+
     return new THREE.TextureLoader();
 };
 
 WHS.API.loadMaterial = function(material) {
+
     'use strict';
 
     if (typeof material.kind !== "string") console.error("Type of material is undefined or not a string. @loadMaterial");
@@ -2216,20 +2025,26 @@ WHS.API.loadMaterial = function(material) {
  * @param {Object} rabbits Object to be added. (REQUIRED)
  */
 WHS.API.merge = function(box, rabbits) {
+
     'use strict';
-    //More presice checking
+
+    // More presice checking.
 
     if (!((typeof box === "undefined" ? "undefined" : _typeof(box)) === 'object' && (typeof rabbits === "undefined" ? "undefined" : _typeof(rabbits)) === 'object')) console.error("No rabbits for the box. (arguments)", [typeof box === "undefined" ? "undefined" : _typeof(box), typeof rabbits === "undefined" ? "undefined" : _typeof(rabbits)]);
-    //Will only get here if box and rabbits are objects, arrays are object !
-    if (!box) //Box should not be null, null is an object too !
+
+    // Will only get here if box and rabbits are objects, arrays are object !
+    if (!box) // Box should not be null, null is an object too !
+
     // #FIXME:0 Fix caller function line number.
         console.error("box is undefined. Line " + new Error().lineNumber + ". Func merge.", [box, rabbits]);
     else {
-        if (Array.isArray(rabbits) && rabbits.length === 1)
-        //Should not be 0
-            box.add(rabbits[0]);
+
+        if (Array.isArray(rabbits) && rabbits.length === 1) box.add(rabbits[0]); // Should not be 0.
+
         else if (Array.isArray(rabbits) && rabbits.length > 1 && box) {
+
             for (var i = 0; i < rabbits.length; i++) {
+
                 box.add(rabbits[i]);
             }
         } else if (!Array.isArray(rabbits)) box.add(rabbits);
@@ -2252,6 +2067,7 @@ WHS.API.PackUvs = function(geometry) {
     var range = new THREE.Vector2(max.x - min.x, max.y - min.y);
 
     geometry.faceVertexUvs[0] = [];
+
     var faces = geometry.faces;
 
     for (var i = 0; i < geometry.faces.length; i++) {
@@ -2273,15 +2089,23 @@ WHS.API.PackUvs = function(geometry) {
  * @return {Object} geometry *THREE.JS* geometry.
  */
 WHS.API.removeDuplicateFaces = function(geometry) {
+
     for (var i = 0; i < geometry.faces.length; i++) {
+
         var tri = geometry.faces[i];
         var inds = [tri.a, tri.b, tri.c, tri.d].sort();
+
         for (var j = 0; j < i; j++) {
+
             var tri_2 = geometry.faces[j];
+
             if (tri_2 !== undefined) {
+
                 // May have already been deleted
                 var inds_2 = [tri_2.a, tri_2.b, tri_2.c, tri_2.d].sort();
+
                 if (WHS.API.isSame(inds, inds_2)) {
+
                     delete geometry.faces[i]; // Sets these faces to undefined
                     // If duplicate, it is also interior, so remove both
                     delete geometry.faces[j];
@@ -2289,28 +2113,13 @@ WHS.API.removeDuplicateFaces = function(geometry) {
             }
         }
     }
+
     geometry.faces = geometry.faces.filter(function(a) {
+
         return a === undefined;
     });
+
     return geometry;
-};
-
-/**
- * Rotate body. Rotates body object *CANNON.JS*.
- *
- * @param {Object} body Body object in *CANNON.JS*. (REQUIRED)
- * @param {Object} rotateSet Object of x, y, z coords. (REQUIRED)
- * @return {Object} Body object in *CANNON.JS*.
- */
-WHS.API.rotateBody = function(body, rotateSet) {
-    'use strict';
-
-    body.quaternion.x = Math.sin(Math.PI / 360 * rotateSet.x); // Replaces 2 divisions with one
-    body.quaternion.y = Math.sin(Math.PI / 360 * rotateSet.y); // Replaces 2 divisions with one
-    body.quaternion.z = Math.sin(Math.PI / 360 * rotateSet.z); // Replaces 2 divisions with one
-    body.quaternion.w = Math.cos(45); //Was 90*0.5 before, hardcoding is better for constants
-
-    return body;
 };
 
 /**
@@ -2321,10 +2130,15 @@ WHS.API.rotateBody = function(body, rotateSet) {
  * @return {Object} *THREE.JS* geometry.
  */
 WHS.API.rotateGeometry = function(geometry, rotateSet) {
+
+    'use strict';
+
     var rotationMatrix = new THREE.Matrix4();
+
     rotationMatrix.makeRotationFromEuler(new THREE.Euler(rotateSet.x, rotateSet.y, rotateSet.z, 'XYZ'));
 
     for (var v in geometry.vertices) {
+
         geometry.vertices[v].applyMatrix4(rotationMatrix);
     }
 
@@ -2339,12 +2153,15 @@ WHS.API.rotateGeometry = function(geometry, rotateSet) {
  * @return {Object} *THREE.JS* texture.
  */
 WHS.API.texture = function(url, options) {
+
     'use strict';
 
     var texture = THREE.ImageUtils.loadTexture(url);
 
     if (options) {
+
         var opt = options;
+
         opt.offset = opt.offset || {
             x: 1,
             y: 1
@@ -2362,6 +2179,7 @@ WHS.API.texture = function(url, options) {
         opt.repeat.y = opt.repeat.y || 1;
 
         texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
         //texture.offset.set(opt.offset.x, opt.offset.y);
         texture.repeat.set(opt.repeat.x, opt.repeat.y);
 
@@ -2379,15 +2197,19 @@ WHS.API.texture = function(url, options) {
  * @param {Object} material *THREE.JS* material. (REQUIRED)
  */
 WHS.API.Triangulate = function(thrObj, material) {
+
     'use strict';
 
     if (!(thrObj instanceof THREE.Geometry)) console.error("No THREE.js geometry");
+
     //If it is instance, then it is defined !
     else if (material) {
+
         var triangles = new THREE.Geometry();
         var materials = [];
 
         thrObj.faces.forEach(function(element) {
+
             var triangle = new THREE.Geometry();
 
             [].push.apply(triangle.vertices, [thrObj.vertices[element.a], thrObj.vertices[element.b], thrObj.vertices[element.c]]);
@@ -2405,35 +2227,41 @@ WHS.API.Triangulate = function(thrObj, material) {
         });
 
         var trianglesMesh = new THREE.Mesh(triangles, new THREE.MeshFaceMaterial(materials));
+
         return trianglesMesh;
     }
 };
 
 // DONE:0 Make Wrap function.
-WHS.API.Wrap = function(SCOPE, mesh, body) {
+WHS.API.Wrap = function(SCOPE, mesh) {
+
     'use strict';
 
-    this._figure = mesh;
-    this._object = body;
+    this._mesh = mesh;
     this._scope = SCOPE;
     this._key = SCOPE.root.modellingQueue.length;
 
     try {
-        api.merge(this._scope.root.scene, this._figure);
-        if (this._object) api.merge(this._scope.root.world, this._object);
+
+        api.merge(this._scope.root.scene, this._mesh);
 
         this._scope.root.modellingQueue.push(this._scope);
     } catch (err) {
+
         console.error(err.message);
 
         this._scope.__deferred.reject();
     } finally {
+
         if (this._scope._wait) {
+
             var sc = this;
-            sc._figure.addEventListener('ready', function() {
+            sc._mesh.addEventListener('ready', function() {
+
                 sc._scope.__deferred.resolve();
             });
         } else {
+
             this._scope.__deferred.resolve();
         }
     }
@@ -2444,8 +2272,7 @@ WHS.API.Wrap = function(SCOPE, mesh, body) {
 WHS.API.Wrap.prototype.remove = function() {
     'use strict';
 
-    this._scope.root.scene.remove(this._figure);
-    this._scope.root.world.remove(this._object);
+    this._scope.root.scene.remove(this._mesh);
 
     WHS.objects.splice(this._key, 1);
 
@@ -2455,8 +2282,7 @@ WHS.API.Wrap.prototype.remove = function() {
 WHS.API.Wrap.prototype.retrieve = function() {
     'use strict';
 
-    this._scope.root.scene.add(this._figure);
-    this._scope.root.world.add(this._object);
+    this._scope.root.scene.add(this._mesh);
 
     WHS.objects.push(this._scope);
 
@@ -2490,6 +2316,7 @@ WHS.Watch.prototype.remove = function(element) {
 };
 
 WHS.plugins.loop = function(func) {
+
     this.loop = {
         func: func,
         id: WHS.plugins.settings.loop_id++,
@@ -2500,16 +2327,19 @@ WHS.plugins.loop = function(func) {
 };
 
 WHS.plugins.loop.prototype.start = function() {
+
     this.loop.enabled = true;
 };
 
 WHS.plugins.loop.prototype.stop = function() {
+
     this.loop.enabled = false;
 };
 
 WHS.gp = {};
 
 WHS.plugins.register = function(name, plugin, global) {
+
     'use strict';
 
     var id = WHS.plugins.settings.plug_id;
@@ -2761,7 +2591,7 @@ WHS.init.prototype.start = function() {
         // Merging data loop.
         for (var i = 0; i < Object.keys(scope.modellingQueue).length; i++) {
             if (scope.modellingQueue[i].morph) {
-                scope.modellingQueue[i].visible.mixer.update(clock.getDelta());
+                scope.modellingQueue[i].mesh.mixer.update(clock.getDelta());
             }
         }
 
@@ -2828,37 +2658,30 @@ WHS.init.prototype.start = function() {
  * @return {Object} Scope.
  */
 WHS.init.prototype.addModel = function(pathToModel, options) {
+
     'use strict';
 
     var scope = new api.construct(this, options, "model");
 
     scope.materialType = api.loadMaterial(options.materialOptions)._material;
 
-    //(new THREE.JSONLoader())
     api.JSONLoader().load(pathToModel, function(data) {
         data.computeFaceNormals();
         data.computeVertexNormals();
 
         // Visualization.
-        scope.visible = new Physijs.ConcaveMesh(data, scope.materialType, options.mass);
+        scope.mesh = new Physijs.ConcaveMesh(data, scope.materialType, options.mass);
         scope._wait = true;
 
-        /*scope.visible.addEventListener('ready', function() {
-          console.log("ready");
-            scope.visible.__dirtyPosition = true;
-            scope.visible.position.set(0, 100, 0);
-          scope.visible.rotation.set(0, 0, 0);
-          scope.visible.setLinearVelocity(new THREE.Vector3(0, 0, 0));
-          } );*/
-
         scope.build();
-        scope.wrap = new api.Wrap(scope, scope.visible);
+        scope.wrap = new api.Wrap(scope, scope.mesh);
     });
 
     return scope;
 };
 
 WHS.init.prototype.addMorph = function(url, options) {
+
     'use strict';
 
     var scope = new api.construct(this, options, "morph");
@@ -2867,27 +2690,26 @@ WHS.init.prototype.addMorph = function(url, options) {
     scope.morph = true;
 
     api.JSONLoader().load(url, function(geometry) {
+
         var material = new THREE.MeshLambertMaterial({
             color: 0xffaa55,
             morphTargets: true,
             vertexColors: THREE.FaceColors
         });
 
-        scope.visible = new THREE.Mesh(geometry, material);
-        scope.visible.speed = scope._morph.speed;
+        scope.mesh = new THREE.Mesh(geometry, material);
+        scope.mesh.speed = scope._morph.speed;
 
-        scope._scale.set(0.1, 0.1, 0.1);
-
-        scope._mixer = new THREE.AnimationMixer(scope.visible);
+        scope._mixer = new THREE.AnimationMixer(scope.mesh);
         scope._mixer.addAction(new THREE.AnimationAction(geometry.animations[0]).warpToDuration(0.5));
 
         scope._mixer.update(600 * Math.random());
-        scope.visible.mixer = scope._mixer;
+        scope.mesh.mixer = scope._mixer;
 
         scope._rot.y = Math.PI / 2;
 
-        scope.build(scope.visible);
-        scope.wrap = new api.Wrap(scope, scope.visible);
+        scope.build(scope.mesh);
+        scope.wrap = new api.Wrap(scope, scope.mesh);
     });
 
     return scope;
@@ -2901,129 +2723,176 @@ WHS.init.prototype.addMorph = function(url, options) {
  * @return {Object} Scope.
  */
 WHS.init.prototype.addObject = function(figureType, options) {
+
     'use strict';
 
-    var scope = new api.construct(this, options, figureType);
-
-    var opt = options || {};
-
-    opt.geometry = options.geometryOptions || {};
-
-    opt.mass = options.onlyvis ? opt.mass : 1;
+    var scope = new api.construct(this, options, figureType),
+        mass = options.onlyvis ? scope._target.mass : 1,
+        fprops;
 
     scope.materialType = api.loadMaterial(options.materialOptions)._material;
 
     switch (figureType) {
         case "sphere":
 
-            api.def(opt.geometry.segmentA, 32);
-            api.def(opt.geometry.segmentB, 32);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.SphereMesh(new THREE.SphereGeometry(opt.geometry.radius, opt.geometry.segmentA, opt.geometry.segmentB), scope.materialType, 10);
+                radius: 1,
+                segmentA: 32,
+                segmentB: 32
+
+            });
+
+            scope.visible = new Physijs.SphereMesh(new THREE.SphereGeometry(fprops.radius, fprops.segmentA, fprops.segmentB), scope.materialType, 10);
 
             break;
         case "cube":
 
-            api.def(opt.geometry.width, 1);
-            api.def(opt.geometry.height, 1);
-            api.def(opt.geometry.depth, 1);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.BoxMesh(new THREE.BoxGeometry(opt.geometry.width, opt.geometry.height, opt.geometry.depth), scope.materialType, opt.mass);
+                width: 1,
+                height: 1,
+                depth: 1
+
+            });
+
+            scope.visible = new Physijs.BoxMesh(new THREE.BoxGeometry(fprops.width, fprops.height, fprops.depth), scope.materialType, mass);
 
             break;
         case "cylinder":
 
-            api.def(opt.geometry.radiusTop, 1);
-            api.def(opt.geometry.radiusBottom, 1);
-            api.def(opt.geometry.height, 1);
-            api.def(opt.geometry.radiusSegments, 32);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.CylinderMesh(new THREE.CylinderGeometry(opt.geometry.radiusTop, opt.geometry.radiusBottom, opt.geometry.height, opt.geometry.radiusSegments), scope.materialType, opt.mass);
+                radiusTop: 1,
+                radiusBottom: 1,
+                height: 1,
+                radiusSegments: 32
+
+            });
+
+            scope.visible = new Physijs.CylinderMesh(new THREE.CylinderGeometry(fprops.radiusTop, fprops.radiusBottom, fprops.height, fprops.radiusSegments), scope.materialType, mass);
 
             break;
         case "dodecahedron":
 
-            api.def(opt.geometry.radius, 1);
-            api.def(opt.geometry.detail, 0);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConvexMesh(new THREE.DodecahedronGeometry(opt.geometry.radius, opt.geometry.detail), scope.materialType, opt.mass);
+                radius: 1,
+                detail: 0
+
+            });
+
+            scope.visible = new Physijs.ConvexMesh(new THREE.DodecahedronGeometry(fprops.radius, fprops.detail), scope.materialType, mass);
 
             break;
         case "extrude":
 
-            api.def(opt.geometry.shapes, []);
-            api.def(opt.geometry.options, {});
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConvexMesh(new THREE.ExtrudeGeometry(opt.geometry.shapes, opt.geometry.options), scope.materialType, opt.mass);
+                shapes: [],
+                options: {}
+
+            });
+
+            scope.visible = new Physijs.ConvexMesh(new THREE.ExtrudeGeometry(fprops.shapes, fprops.options), scope.materialType, mass);
 
             break;
         case "icosahedron":
 
-            api.def(opt.geometry.radius, 1);
-            api.def(opt.geometry.detail, 0);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConvexMesh(new THREE.IcosahedronGeometry(opt.geometry.radius, opt.geometry.detail), scope.materialType, opt.mass);
+                radius: 1,
+                detail: 0
+
+            });
+
+            scope.visible = new Physijs.ConvexMesh(new THREE.IcosahedronGeometry(fprops.radius, fprops.detail), scope.materialType, mass);
 
             break;
         case "lathe":
 
-            api.def(opt.geometry.points, []);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConvexMesh(new THREE.LatheGeometry(opt.geometry.points), scope.materialType, opt.mass);
+                points: []
+
+            });
+
+            scope.visible = new Physijs.ConvexMesh(new THREE.LatheGeometry(fprops.points), scope.materialType, mass);
 
             break;
         case "octahedron":
 
-            api.def(opt.geometry.radius, 1);
-            api.def(opt.geometry.detail, 0);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConvexMesh(new THREE.OctahedronGeometry(opt.geometry.radius, opt.geometry.detail), scope.materialType, opt.mass);
+                radius: 1,
+                detail: 0
+
+            });
+
+            scope.visible = new Physijs.ConvexMesh(new THREE.OctahedronGeometry(fprops.radius, fprops.detail), scope.materialType, mass);
 
             break;
         case "parametric":
 
-            api.def(opt.geometry.func, function() {});
-            api.def(opt.geometry.slices, 10);
-            api.def(opt.geometry.stacks, 10);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConvexMesh(new THREE.ParametricGeometry(opt.geometry.func, opt.geometry.slices, opt.geometry.stacks), scope.materialType, opt.mass);
+                func: function func() {},
+                slices: 10,
+                stacks: 10
+
+            });
+
+            scope.visible = new Physijs.ConvexMesh(new THREE.ParametricGeometry(fprops.func, fprops.slices, fprops.stacks), scope.materialType, mass);
 
             break;
         case "plane":
 
-            api.def(opt.geometry.func, function() {});
-            api.def(opt.geometry.width, 10);
-            api.def(opt.geometry.height, 10);
-            api.def(opt.geometry.segments, 32);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConvexMesh(new THREE.PlaneBufferGeometry(opt.geometry.width, opt.geometry.height, opt.geometry.segments), scope.materialType, opt.mass);
+                width: 1,
+                height: 0,
+                segments: 32
+
+            });
+
+            scope.visible = new Physijs.ConvexMesh(new THREE.PlaneBufferGeometry(fprops.width, fprops.height, fprops.segments), scope.materialType, mass);
 
             break;
         case "polyhedron":
 
-            api.def(opt.geometry.verticesOfCube, []);
-            api.def(opt.geometry.indicesOfFaces, []);
-            api.def(opt.geometry.radius, 1);
-            api.def(opt.geometry.detail, 1);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConvexMesh(new THREE.PolyhedronGeometry(opt.geometry.verticesOfCube, opt.geometry.indicesOfFaces), scope.materialType, opt.mass);
+                verticesOfCube: [],
+                indicesOfFaces: [],
+                radius: 1,
+                detail: 1
+
+            });
+
+            scope.visible = new Physijs.ConvexMesh(new THREE.PolyhedronGeometry(fprops.verticesOfCube, fprops.indicesOfFaces), scope.materialType, mass);
 
             break;
         case "ring":
 
-            api.def(opt.geometry.innerRadius, 0);
-            api.def(opt.geometry.outerRadius, 50);
-            api.def(opt.geometry.thetaSegments, 1);
-            api.def(opt.geometry.phiSegments, 8);
-            api.def(opt.geometry.thetaStart, 0);
-            api.def(opt.geometry.thetaLength, Math.PI * 2);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConcaveMesh(new THREE.TorusGeometry(opt.geometry.outerRadius, (opt.geometry.outerRadius - opt.geometry.innerRadius) / 2, opt.geometry.thetaSegments, opt.geometry.phiSegments), scope.materialType, opt.mass);
+                innerRadius: 0,
+                outerRadius: 50,
+                thetaSegments: 1,
+                phiSegments: 8,
+                thetaStart: 0,
+                thetaLength: Math.PI * 2
+
+            });
+
+            scope.visible = new Physijs.ConcaveMesh(new THREE.TorusGeometry(fprops.outerRadius, (fprops.outerRadius - fprops.innerRadius) / 2, fprops.thetaSegments, fprops.phiSegments), scope.materialType, mass);
 
             break;
         case "shape":
 
-            scope.visible = new THREE.Mesh(new THREE.ShapeGeometry(opt.geometry.shapes), scope.materialType);
+            fprops.shapes = options.geometryOptions.shapes;
+
+            scope.visible = new THREE.Mesh(new THREE.ShapeGeometry(fprops.shapes), scope.materialType);
 
             scope.onlyvis = true;
 
@@ -3033,55 +2902,75 @@ WHS.init.prototype.addObject = function(figureType, options) {
             break;
         case "tetrahedron":
 
-            api.def(opt.geometry.radius, 1);
-            api.def(opt.geometry.detail, 0);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConvexMesh(new THREE.TetrahedronGeometry(opt.geometry.radius, opt.geometry.detail), scope.materialType, opt.mass);
+                radius: 1,
+                detail: 0
+
+            });
+
+            scope.visible = new Physijs.ConvexMesh(new THREE.TetrahedronGeometry(fprops.radius, fprops.detail), scope.materialType, mass);
 
             break;
         case "text":
 
-            opt.geometry.parameters = opt.geometry.parameters || {};
+            fprops = api.extend(options.geometryOptions, {
 
-            api.def(opt.geometry.text, "Hello World!");
-            api.def(opt.geometry.parameters.size, 1);
-            api.def(opt.geometry.parameters.height, 50);
-            api.def(opt.geometry.parameters.curveSegments, 1);
-            api.def(opt.geometry.parameters.font, "Adelle"); // string !
-            api.def(opt.geometry.parameters.weight, "normal"); // string !
-            api.def(opt.geometry.parameters.style, "normal");
-            api.def(opt.geometry.parameters.bevelEnabled, false);
-            api.def(opt.geometry.parameters.bevelThickness, 10);
-            api.def(opt.geometry.parameters.bevelSize, 8);
+                text: "Hello World!"
 
-            scope.visible = new Physijs.ConcaveMesh(new THREE.TextGeometry(opt.geometry.text, opt.geometry.parameters), scope.materialType, opt.masss);
+            });
+
+            fprops.parameters = api.extend(options.geometryOptions.parameters, {
+
+                size: 1,
+                height: 50,
+                curveSegments: 1,
+                font: "Adelle",
+                weight: "normal",
+                style: "normal",
+                bevelEnabled: false,
+                bevelThickness: 10,
+                bevelSize: 8
+
+            });
+
+            scope.visible = new Physijs.ConcaveMesh(new THREE.TextGeometry(fprops.text, fprops.parameters), scope.materialType, masss);
 
             break;
         case "torus":
 
-            api.def(opt.geometry.radius, 100);
-            api.def(opt.geometry.tube, 40);
-            api.def(opt.geometry.radialSegments, 8);
-            api.def(opt.geometry.tubularSegments, 6);
-            api.def(opt.geometry.arc, Math.PI * 2);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConcaveMesh(new THREE.TorusGeometry(opt.geometry.radius, opt.geometry.tube, opt.geometry.radialSegments, opt.geometry.tubularSegments, opt.geometry.arc), scope.materialType, opt.mass);
+                radius: 100,
+                tube: 40,
+                radialSegments: 8,
+                tubularSegments: 6,
+                arc: Math.PI * 2
+
+            });
+
+            scope.visible = new Physijs.ConcaveMesh(new THREE.TorusGeometry(fprops.radius, fprops.tube, fprops.radialSegments, fprops.tubularSegments, fprops.arc), scope.materialType, mass);
 
             break;
         case "torusknot":
 
-            api.def(opt.geometry.radius, 100);
-            api.def(opt.geometry.tube, 40);
-            api.def(opt.geometry.radialSegments, 8);
-            api.def(opt.geometry.tubularSegments, 6);
-            api.def(opt.geometry.arc, Math.PI * 2);
+            fprops = api.extend(options.geometryOptions, {
 
-            scope.visible = new Physijs.ConvexMesh(new THREE.TorusKnotGeometry(opt.geometry.radius, opt.geometry.tube, opt.geometry.radialSegments, opt.geometry.tubularSegments, opt.geometry.p, opt.geometry.q, opt.geometry.heightScale), scope.materialType, opt.mass);
+                radius: 100,
+                tube: 40,
+                radialSegments: 64,
+                tubularSegments: 8,
+                p: 2,
+                q: 3,
+                heightScale: 1
+
+            });
+
+            scope.visible = new Physijs.ConvexMesh(new THREE.TorusKnotGeometry(fprops.radius, fprops.tube, fprops.radialSegments, fprops.tubularSegments, fprops.p, fprops.q, fprops.heightScale), scope.materialType, mass);
 
             break;
         case "tube":
 
-            // #FIXME:30 fix to WHS.API (not here)
             scope.CustomSinCurve = THREE.Curve.create(function(scale) {
                 //custom curve constructor
                 this.scale = scale || 1;
@@ -3090,32 +2979,32 @@ WHS.init.prototype.addObject = function(figureType, options) {
                 var tx = t * 3 - 1.5,
                     ty = Math.sin(2 * Math.PI * t),
                     tz = 0;
+
                 return new THREE.Vector3(tx, ty, tz).multiplyScalar(this.scale);
             });
 
-            if (!opt.geometry.path) {
-                opt.geometry.path = new this.CustomSinCurve(100);
-            }
+            fprops = api.extend(options.geometryOptions, {
 
-            api.def(opt.geometry.segments, 20);
-            api.def(opt.geometry.radius, 2);
-            api.def(opt.geometry.radiusSegments, 8);
-            api.def(opt.geometry.closed, false);
+                path: options.geometryOptions.path ? new this.CustomSinCurve(100) : false,
+                segments: 20,
+                radius: 2,
+                radiusSegments: 8,
+                closed: false
 
-            scope.visible = new Physijs.ConcaveMesh(new THREE.TubeGeometry(opt.geometry.path, opt.geometry.segments, opt.geometry.radius, opt.geometry.radiusSegments, opt.geometry.closed), scope.materialType, opt.masss);
+            });
+
+            scope.visible = new Physijs.ConcaveMesh(new THREE.TubeGeometry(fprops.path, fprops.segments, fprops.radius, fprops.radiusSegments, fprops.closed), scope.materialType, masss);
 
             break;
     }
 
-    // DOING:20 Fix code style here.
     scope.addCompoundFace = function() {
-        this.compoundFace = new THREE.Geometry();
 
+        this.compoundFace = new THREE.Geometry();
         this.compoundFace.faces.push(new THREE.Face3(0, 1, 2));
 
-        var boundingBox = new THREE.Box3().setFromObject(this.visible);
-
-        var boxAround = new THREE.BoxGeometry(boundingBox.max.x - boundingBox.min.x, boundingBox.max.y - boundingBox.min.y, boundingBox.max.z - boundingBox.min.z);
+        var boundingBox = new THREE.Box3().setFromObject(this.visible),
+            boxAround = new THREE.BoxGeometry(boundingBox.max.x - boundingBox.min.x, boundingBox.max.y - boundingBox.min.y, boundingBox.max.z - boundingBox.min.z);
 
         var vec1 = boxAround.vertices[boxAround.faces[7].a].add(this.visible.position);
 
@@ -3137,9 +3026,9 @@ WHS.init.prototype.addObject = function(figureType, options) {
         return scope.wrap.retrieve();
     };
 
-    scope.build(scope.visible, scope.body);
+    scope.build(scope.visible);
 
-    scope.wrap = new api.Wrap(scope, scope.visible, scope.body);
+    scope.wrap = new api.Wrap(scope, scope.visible);
 
     return scope;
 };
@@ -3153,6 +3042,7 @@ WHS.init.prototype.addObject = function(figureType, options) {
  * @returns {Object} This element scope/statement.
  */
 WHS.init.prototype.addGrass = function(ground, options) {
+
     'use strict';
 
     var scope = {};
@@ -3277,6 +3167,7 @@ WHS.init.prototype.addGrass = function(ground, options) {
  * @return {Object} Scope.
  */
 WHS.init.prototype.addGround = function(type, size, material, pos) {
+
     'use strict';
 
     var options = {
@@ -3287,64 +3178,66 @@ WHS.init.prototype.addGround = function(type, size, material, pos) {
 
     scope.skip = true;
 
-    api.def(size, {
+    api.extend({
         width: 100,
         height: 100
-    });
+    }, size);
 
     scope.materialType = api.loadMaterial(material)._material;
 
     switch (type) {
         case "smooth":
 
-            //scope.visible = new Physijs.PlaneMesh(
-            //new THREE.PlaneGeometry(size.width, size.height, 1, 1),
+            //scope.mesh = new Physijs.PlaneMesh(
+            //  new THREE.PlaneGeometry(size.width, size.height, 1, 1),
             //scope.materialType, 0);
 
-            scope.visible = new Physijs.BoxMesh(new THREE.BoxGeometry(size.width, 1, size.height), scope.materialType, 0);
+            scope.mesh = new Physijs.BoxMesh(new THREE.BoxGeometry(size.width, 1, size.height), scope.materialType, 0);
 
             //scope._rot.set(-90 / 180 * Math.PI, 0, 0);
 
             break;
 
         case "terrain":
-            //api.def(size.detality, 0);
 
             var canvas = document.createElement('canvas');
+
             canvas.setAttribute("width", size.width);
             canvas.setAttribute("height", size.height);
 
             if (canvas.getContext) {
+
                 var ctx = canvas.getContext('2d');
 
                 ctx.drawImage(size.terrain, 0, 0);
             }
 
-            //if (size.useDeafultMaterial) {
-
+            // Ocean texture.
             var oceanTexture = api.TextureLoader().load(scope.root._settings.assets + '/textures/terrain/dirt-512.jpg');
 
             oceanTexture.wrapS = oceanTexture.wrapT = THREE.RepeatWrapping;
 
+            // Sandy texture.
             var sandyTexture = api.TextureLoader().load(scope.root._settings.assets + '/textures/terrain/sand-512.jpg');
 
             sandyTexture.wrapS = sandyTexture.wrapT = THREE.RepeatWrapping;
 
+            // Grass texture.
             var grassTexture = api.TextureLoader().load(scope.root._settings.assets + '/textures/terrain/grass-512.jpg');
 
             grassTexture.wrapS = grassTexture.wrapT = THREE.RepeatWrapping;
 
+            // Rocky texture.
             var rockyTexture = api.TextureLoader().load(scope.root._settings.assets + '/textures/terrain/rock-512.jpg');
 
             rockyTexture.wrapS = rockyTexture.wrapT = THREE.RepeatWrapping;
 
+            // Snowy texture.
             var snowyTexture = api.TextureLoader().load(scope.root._settings.assets + '/textures/terrain/snow-512.jpg');
 
             snowyTexture.wrapS = snowyTexture.wrapT = THREE.RepeatWrapping;
 
-            //scope.materialType = size.useDeafultMaterial ?
-            //  customMaterial : scope.materialType;
-
+            // Normal Map.
             var normalShader = THREE.NormalMapShader;
 
             var rx = 256,
@@ -3353,18 +3246,26 @@ WHS.init.prototype.addGround = function(type, size, material, pos) {
             var pars = {
                 minFilter: THREE.LinearFilter,
                 magFilter: THREE.LinearFilter,
+
                 format: THREE.RGBFormat
             };
 
+            // Heightmap.
             var heightMap = new THREE.WebGLRenderTarget(rx, ry, pars);
+
             heightMap.texture = api.TextureLoader().load(scope.root._settings.assets + '/terrain/default_terrain.png');
 
+            // Normalmap.
             var normalMap = new THREE.WebGLRenderTarget(rx, ry, pars);
+
             normalMap.texture = api.TextureLoader().load(scope.root._settings.assets + '/terrain/NormalMap.png');
 
+            // Specularmap.
             var specularMap = new THREE.WebGLRenderTarget(256, 256, pars); //2048
+
             specularMap.texture = api.TextureLoader().load(scope.root._settings.assets + '/terrain/default_terrain.png');
 
+            // Terrain shader (ShaderTerrain.js).
             var terrainShader = THREE.ShaderTerrain["terrain"];
 
             var uniformsTerrain = Object.assign(THREE.UniformsUtils.clone(terrainShader.uniforms), {
@@ -3409,10 +3310,10 @@ WHS.init.prototype.addGround = function(type, size, material, pos) {
             uniformsTerrain["shadowMap"].value = [normalMap];
 
             uniformsTerrain["uDisplacementScale"].value = 100;
-
             uniformsTerrain["uRepeatOverlay"].value.set(6, 6);
 
             var material = new THREE.ShaderMaterial({
+
                 uniforms: uniformsTerrain,
                 vertexShader: terrainShader.vertexShader,
                 fragmentShader: terrainShader.fragmentShader,
@@ -3420,63 +3321,44 @@ WHS.init.prototype.addGround = function(type, size, material, pos) {
                 fog: true,
                 side: THREE.DoubleSide,
                 shading: THREE.SmoothShading
+
             });
 
             var geom = new THREE.PlaneGeometry(256, 256, 255, 255);
-
-            //THREE.BufferGeometryUtils.computeTangents( geom );
 
             geom.verticesNeedUpdate = true;
 
             scope._rot.set(Math.PI / 180 * -90, 0, 0);
 
-            var hgtdata = [],
-                index = 0,
-                i = 0; // new Array(256);
-            var imgdata = ctx.getImageData(0, 0, 256, 256).data;
-            //console.log(geom);
-            for (var x = 0; x <= 255; x++) {
-                hgtdata[x] = new Uint8Array(256);
+            var index = 0,
+                i = 0,
+                imgdata = ctx.getImageData(0, 0, 256, 256).data;
 
+            for (var x = 0; x <= 255; x++) {
                 for (var y = 255; y >= 0; y--) {
-                    //hgtdata[x][255-y] = ctx.getImageData(x, y, 1, 1).data[0]/255 * 100;
                     geom.vertices[index].z = imgdata[i] / 255 * 100;
+
                     i += 4;
                     index++;
                 }
             }
 
-            scope.visible = new Physijs.HeightfieldMesh(geom, Physijs.createMaterial(material, 0.8, 0.1));
-
-            /*var height_img_data = ctx.getImageData(0, 0, 256, 256).data;
-            var z, index = 0;
-            for( var i = 0, l = height_img_data.length; i<l; i+=4){
-                     z = height_img_data[i];
-                     geom.vertices[index].z = z / 255 * 100;
-                     index = index + 1;
-             }*/
+            scope.mesh = new Physijs.HeightfieldMesh(geom, Physijs.createMaterial(material, 0.8, 0.1));
 
             geom.computeVertexNormals();
             geom.computeFaceNormals();
-            //geom.computeTangents();
+            geom.computeTangents();
 
-            scope.visible.updateMatrix();
-
-            scope.dtb = true;
-
-            //scope.physic.scale.x = 256/250;
-            //scope.physic.scale.z = 256/250;
-            //scope.body.name = scope.name;
-
-            scope.visible.castShadow = true;
-            scope.visible.receiveShadow = true;
+            scope.mesh.updateMatrix();
+            scope.mesh.castShadow = true;
+            scope.mesh.receiveShadow = true;
 
             break;
     }
 
-    scope.build(scope.visible, scope.body);
+    scope.build(scope.mesh);
 
-    scope.wrap = api.Wrap(scope, scope.visible, scope.body);
+    scope.wrap = api.Wrap(scope, scope.mesh);
 
     return scope;
 };
@@ -3489,6 +3371,7 @@ WHS.init.prototype.addGround = function(type, size, material, pos) {
  * @returns {Object} This element scope/statement.
  */
 WHS.init.prototype.addFog = function(type, params) {
+
     'use strict';
 
     var scope = {};
@@ -3541,67 +3424,67 @@ WHS.init.prototype.addLight = function(type, opts, pos, target) {
 
     switch (type) {
         case "ambient":
-            scope.visible = new THREE.AmbientLight(0xffffff);
+            scope.mesh = new THREE.AmbientLight(0xffffff);
             break;
 
         case "area":
-            scope.visible = new THREE.AreaLight(options.color, options.intensity);
+            scope.mesh = new THREE.AreaLight(options.color, options.intensity);
             console.warn([this.visible], "This light only works in the deferredrenderer");
             break;
 
         case "directional":
-            scope.visible = new THREE.DirectionalLight(options.color, options.intensity);
+            scope.mesh = new THREE.DirectionalLight(options.color, options.intensity);
 
             break;
 
         case "hemisphere":
-            scope.visible = new THREE.HemisphereLight(options.skyColor, options.groundColor, options.intensity);
+            scope.mesh = new THREE.HemisphereLight(options.skyColor, options.groundColor, options.intensity);
 
             break;
 
         case "light":
-            scope.visible = new THREE.Light(options.color);
+            scope.mesh = new THREE.Light(options.color);
 
             break;
 
         case "point":
-            scope.visible = new THREE.PointLight(options.color, options.intensity, options.distance);
+            scope.mesh = new THREE.PointLight(options.color, options.intensity, options.distance);
 
-            //scope.visible.visible = false;
+            //scope.mesh.visible = false;
 
             break;
 
         case "spot":
-            scope.visible = new THREE.SpotLight(options.color, options.intensity, options.distance, options.angle);
+            scope.mesh = new THREE.SpotLight(options.color, options.intensity, options.distance, options.angle);
 
             break;
     }
 
-    //scope.visible.shadowCameraVisible = true;
+    //scope.mesh.shadowCameraVisible = true;
 
-    scope.visible.castShadow = true;
+    scope.mesh.castShadow = true;
 
     // #FIXME:20 Shadow default parameters.
-    scope.visible.shadowMapWidth = 1024;
-    scope.visible.shadowMapHeight = 1024;
-    scope.visible.shadowBias = 0.0001;
+    scope.mesh.shadowMapWidth = 1024;
+    scope.mesh.shadowMapHeight = 1024;
+    scope.mesh.shadowBias = 0.0001;
 
-    scope.visible.shadowCameraNear = true;
-    scope.visible.shadowCameraFar = 400;
-    scope.visible.shadowCameraFov = 60;
-    scope.visible.shadowDarkness = 0.3;
+    scope.mesh.shadowCameraNear = true;
+    scope.mesh.shadowCameraFar = 400;
+    scope.mesh.shadowCameraFov = 60;
+    scope.mesh.shadowDarkness = 0.3;
 
     var d = 200;
 
-    scope.visible.shadowCameraLeft = -d;
-    scope.visible.shadowCameraRight = d;
-    scope.visible.shadowCameraTop = d;
-    scope.visible.shadowCameraBottom = -d;
+    scope.mesh.shadowCameraLeft = -d;
+    scope.mesh.shadowCameraRight = d;
+    scope.mesh.shadowCameraTop = d;
+    scope.mesh.shadowCameraBottom = -d;
 
-    if (scope.visible.target) scope.visible.target.position.set(scope._target.x, scope._target.y, scope._target.z);
+    if (scope.mesh.target) scope.mesh.target.position.set(scope._target.x, scope._target.y, scope._target.z);
 
     scope.build();
-    scope.wrap = api.Wrap(scope, scope.visible);
+    scope.wrap = api.Wrap(scope, scope.mesh);
 
     return scope;
 };
@@ -3615,6 +3498,7 @@ WHS.init.prototype.addLight = function(type, opts, pos, target) {
  * @return {Object} Scope.
  */
 WHS.init.prototype.addWagner = function(wagnerjs, type, params) {
+
     'use strict';
 
     params = params || {};
@@ -3733,7 +3617,11 @@ WHS.init.prototype.addWagner = function(wagnerjs, type, params) {
  *
  * @param {Object} object *WHS* figure/object. (REQUIRED)
  */
+
+var PI_2 = Math.PI / 2;
+
 WHS.init.prototype.MakeFirstPerson = function(object, params) {
+
     'use strict';
 
     var target = $.extend({
@@ -3742,30 +3630,235 @@ WHS.init.prototype.MakeFirstPerson = function(object, params) {
         ypos: 1
     }, params);
 
-    // #TODO:40 Clean up.
-    this.controls = new PointerLockControls(this._camera, object.visible, target);
+    this.controls = new function(camera, mesh, params) {
+
+        /* Velocity properties */
+        var velocityFactor = 1,
+            //Same as 20 * 0.05
+            runVelocity = 0.25;
+
+        mesh.setAngularFactor({
+            x: 0,
+            y: 0,
+            z: 0
+        });
+
+        /* Init */
+        var scope = this,
+            pitchObject = new THREE.Object3D();
+
+        pitchObject.add(camera);
+
+        var yawObject = new THREE.Object3D();
+
+        yawObject.position.y = params.ypos; // eyes are 2 meters above the ground
+        yawObject.add(pitchObject);
+
+        var quat = new THREE.Quaternion(),
+            moveForward = false,
+            moveBackward = false,
+            moveLeft = false,
+            moveRight = false,
+            canJump = false;
+
+        mesh.addEventListener("collision", function(other_object, v, r, contactNormal) {
+
+            // If contactNormal.dot(upAxis) is between 0 and 1, we know that the contact normal is somewhat in the up direction.
+            // Update, we do not need upAxis, (a, b, c).dot((0, 1, 0)) = b right ?
+            if (contactNormal.y < 0.5) // Use a "good" threshold value between 0 and 1 here!
+                canJump = true;
+        });
+
+        function onMouseMove(event) {
+            if (scope.enabled === false) return;
+
+            var movementX = event.movementX || event.mozMovementX || event.getMovementX() || 0,
+                movementY = event.movementY || event.mozMovementY || event.getMovementY() || 0;
+
+            yawObject.rotation.y -= movementX * 0.002, pitchObject.rotation.x -= movementY * 0.002;
+
+            pitchObject.rotation.x = Math.max(-PI_2, Math.min(PI_2, pitchObject.rotation.x));
+        };
+
+        function onKeyDown(event) {
+
+            switch (event.keyCode) {
+
+                case 38: // up
+                case 87:
+                    // w
+                    moveForward = true;
+                    break;
+
+                case 37: // left
+                case 65:
+                    // a
+                    moveLeft = true;
+                    break;
+
+                case 40: // down
+                case 83:
+                    // s
+                    moveBackward = true;
+                    break;
+
+                case 39: // right
+                case 68:
+                    // d
+                    moveRight = true;
+                    break;
+
+                case 32:
+                    // space
+                    if (canJump == true) {
+
+                        mesh.applyCentralImpulse({
+                            x: 0,
+                            y: 300,
+                            z: 0
+                        });
+                        // Read the PhysiJS Code, they do not verify if
+                        // the argument is a THREE.Vector3 as long is it has x, y, z
+                    }
+
+                    canJump = false;
+
+                    break;
+
+                case 15:
+                    // shift
+
+                    runVelocity = 0.5;
+                    break;
+
+            }
+        };
+
+        function onKeyUp(event) {
+            switch (event.keyCode) {
+
+                case 38: // up
+                case 87:
+                    // w
+                    moveForward = false;
+                    break;
+
+                case 37: // left
+                case 65:
+                    // a
+                    moveLeft = false;
+                    break;
+
+                case 40: // down
+                case 83:
+                    // a
+                    moveBackward = false;
+                    break;
+
+                case 39: // right
+                case 68:
+                    // d
+                    moveRight = false;
+                    break;
+
+                case 15:
+                    // shift
+                    runVelocity = 0.25;
+                    break;
+
+            }
+        };
+
+        document.body.addEventListener('mousemove', onMouseMove, false);
+        document.body.addEventListener('keydown', onKeyDown, false);
+        document.body.addEventListener('keyup', onKeyUp, false);
+
+        this.enabled = false;
+
+        this.getObject = function() {
+            return yawObject;
+        };
+
+        this.getDirection = function(targetVec) {
+            targetVec.set(0, 0, -1);
+            quat.multiplyVector3(targetVec);
+        };
+
+        // Moves the camera to the Cannon.js object position
+        // and adds velocity to the object if the run key is down.
+        var inputVelocity = new THREE.Vector3(),
+            euler = new THREE.Euler();
+
+        this.update = function(delta) {
+
+            var moveVec = new THREE.Vector3();
+
+            if (scope.enabled === false) return;
+
+            delta = 0.5;
+            delta = Math.min(delta, 0.5);
+
+            inputVelocity.set(0, 0, 0);
+
+            var speed = velocityFactor * delta * params.speed * runVelocity;
+
+            if (moveForward) {
+                inputVelocity.z = -speed;
+            }
+
+            if (moveBackward) {
+                inputVelocity.z = speed;
+            }
+
+            if (moveLeft) {
+                inputVelocity.x = -speed;
+            }
+
+            if (moveRight) {
+                inputVelocity.x = speed;
+            }
+
+            // Convert velocity to world coordinates
+            euler.x = pitchObject.rotation.x, euler.y = yawObject.rotation.y, euler.order = "XYZ";
+
+            quat.setFromEuler(euler);
+
+            inputVelocity.applyQuaternion(quat);
+            //quat.multiplyVector3(inputVelocity);
+
+            mesh.applyCentralImpulse({
+                x: inputVelocity.x * 10,
+                y: 0,
+                z: inputVelocity.z * 10
+            });
+            mesh.setAngularVelocity({
+                x: inputVelocity.z * 10,
+                y: 0,
+                z: -inputVelocity.x * 10
+            });
+
+            yawObject.position.copy(mesh.position);
+        };
+    }(this._camera, object.visible, target);
 
     var controls = this.controls;
 
     WHS.API.merge(this.scene, this.controls.getObject());
 
     if ('pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document) {
+
         var element = document.body;
 
         this.pointerlockchange = function() {
             if (document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element) {
+
                 controls.enabled = true;
 
-                /*target.block.css({
-                  'display': 'none'
-                });*/
                 $(target.block).fadeOut();
             } else {
+
                 controls.enabled = false;
 
-                /*target.block.css({
-                  'display': 'block'
-                });*/
                 $(target.block).fadeIn();
             }
         };
@@ -3784,21 +3877,25 @@ WHS.init.prototype.MakeFirstPerson = function(object, params) {
     document.addEventListener('webkitpointerlockerror', this.pointerlockerror, false);
 
     target.block.on('click', function() {
+
         element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
 
+        element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
+
         if (/Firefox/i.test(navigator.userAgent)) {
+
             var fullscreenchange = function fullscreenchange() {
                 if (document.fullscreenElement === element || document.mozFullscreenElement === element || document.mozFullScreenElement === element) {
+
                     document.removeEventListener('fullscreenchange', fullscreenchange);
                     document.removeEventListener('mozfullscreenchange', fullscreenchange);
+
                     element.requestPointerLock();
                 }
             };
 
             document.addEventListener('fullscreenchange', fullscreenchange, false);
             document.addEventListener('mozfullscreenchange', fullscreenchange, false);
-
-            element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
 
             element.requestFullscreen();
         } else element.requestPointerLock();
@@ -3811,8 +3908,18 @@ WHS.init.prototype.MakeFirstPerson = function(object, params) {
  * @param {Object} object Description. (OPTIONAL)
  */
 WHS.init.prototype.OrbitControls = function(object) {
-    // #TODO:170 add use for object.
+
     this.controls = new THREE.OrbitControls(this._camera, this.renderer.domElement);
+
+    if (object) {
+
+        if (object._whsobject) {
+
+            var target = object ? object.visible.position : new THREE.Vector3(0, 0, 0);
+            this.controls.target = target;
+        } else if ((typeof object === "undefined" ? "undefined" : _typeof(object)) == "object") this.controls.target.copy(target);
+        else console.error("Object must be a THREE.JS vector! @OrbitControls");
+    }
 };
 
 /**
@@ -3865,12 +3972,12 @@ WHS.init.prototype.addSkybox = function(options) {
             break;
     }
 
-    scope.visible = new THREE.Mesh(skyGeometry, skyMat);
-    scope.visible.renderDepth = 1000.0;
+    scope.mesh = new THREE.Mesh(skyGeometry, skyMat);
+    scope.mesh.renderDepth = 1000.0;
 
     scope.build();
 
-    scope.wrap = api.Wrap(scope, scope.visible);
+    scope.wrap = api.Wrap(scope, scope.mesh);
 
     return scope;
 };

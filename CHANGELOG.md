@@ -1,6 +1,6 @@
 ## Changelog
 
-##### Before contibuting here see [rules](https://github.com/WhitestormJS/whitestorm.js/blob/master/CONTRIBUTING.md#adding-changes-to-changelogmd)
+##### Before contibuting here see [rules](https://github.com/WhitestormJS/whitestorm.js/blob/master/CONTRIBUTING.md#-adding-changes-to-changelogmd)
 
 **current**
 - Fixed #16 "object.assign() chrome bug."
@@ -27,9 +27,23 @@
 - `GAME.start()` added.
 - CSF. ShaderTerrain.js
 - Edit skybox example to prevent dodecahedron from rolling off of the ground
-- CSF. skybox.html
-- CSF. addSkybox.js
-- CSF. prefix.js
+- CSF. `skybox.html`
+- CSF. `addSkybox.js`
+- CSF. `prefix.js`
+- CSF. `addObject.js`
+- CSF. `API/*.js`
+- CSF. `FPSControls.js`
+- Fixed OrbitControls parameter.
+- Fixed parrot scale in fps example.
+- CSF. `addMorph.js`
+- CSF. `addModel.js`
+- *scope.visible -> scope.mesh*
+- *scope.body -> x*
+- CSF. `addGround.js`
+- CSF. `game.js`
+- CSF. `addMorph.js`
+- CSF. `loop.js`
+- CSF. `register.js`
 
 **v0.0.6**
 - Made `WHS.API.construct.build` parameters optional.

@@ -4,34 +4,39 @@
  * Email: alexbuzin88@gmail.com
 */
 
-WHS.init.prototype.addMorph = function (url, options) {
-  'use strict';
+WHS.init.prototype.addMorph = function( url, options ) {
 
-  var scope = new api.construct(this, options, "morph");
+    'use strict';
+
+    var scope = new api.construct( this, options, "morph" );
 
     scope.skip = true;
     scope.morph = true;
 
+    api.JSONLoader().load( url, function( geometry ) {
 
-  api.JSONLoader().load(url, function(geometry) {
-    var material = new THREE.MeshLambertMaterial( { color: 0xffaa55, morphTargets: true, vertexColors: THREE.FaceColors } );
+        var material = new THREE.MeshLambertMaterial( {
+            color: 0xffaa55,
+            morphTargets: true,
+            vertexColors: THREE.FaceColors
+        } );
 
-    scope.visible = new THREE.Mesh( geometry, material );
-    scope.visible.speed = scope._morph.speed;
+        scope.mesh = new THREE.Mesh( geometry, material );
+        scope.mesh.speed = scope._morph.speed;
 
-    scope._scale.set(0.1, 0.1, 0.1);
+        scope._mixer = new THREE.AnimationMixer( scope.mesh );
+        scope._mixer.addAction( new THREE.AnimationAction( geometry.animations[ 0 ] ).warpToDuration( 0.5 ) );
 
-    scope._mixer = new THREE.AnimationMixer( scope.visible );
-    scope._mixer.addAction( new THREE.AnimationAction( geometry.animations[0] ).warpToDuration( 0.5 ) );
+        scope._mixer.update( 600 * Math.random() );
+        scope.mesh.mixer = scope._mixer;
 
-    scope._mixer.update( 600 * Math.random() );
-    scope.visible.mixer = scope._mixer;
+        scope._rot.y = Math.PI / 2;
 
-    scope._rot.y = Math.PI/2;
+        scope.build( scope.mesh );
+        scope.wrap = new api.Wrap( scope, scope.mesh );
 
-    scope.build(scope.visible);
-    scope.wrap = new api.Wrap(scope, scope.visible);
-  });
+    } );
 
-  return scope;
+    return scope;
+
 }
